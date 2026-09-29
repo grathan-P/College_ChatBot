@@ -1,0 +1,23 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Environment variables and secrets
+.env
+.env.*
+!.env.example
+
+# Generated vector indexes
+faiss_index/
+chroma_db/
+
+# Local data
+data/raw/
+
+# Logs
+*.log
