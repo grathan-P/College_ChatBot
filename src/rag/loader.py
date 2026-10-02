@@ -1,24 +1,47 @@
-
 from pathlib import Path
 
 from langchain_core.documents import Document
 from langchain_community.document_loaders import PyPDFLoader
 
 
+def _get_document_metadata(path: Path) -> dict[str, str]:
+    """Return stable metadata for a known project document."""
+
+    filename = path.name
+
+    if "B.Tech." in filename:
+        return {
+            "source": filename,
+            "academic_year": "2026-27",
+            "document_type": "regulations_and_syllabus",
+            "document_status": "current",
+        }
+
+    if "NMAMIT_Student_Academic_Internship_Guide" in filename:
+        return {
+            "source": filename,
+            "academic_year": "2026-27",
+            "document_type": "student_reference_guide",
+            "document_status": "reference",
+        }
+
+    if "Rules & Regulations" in filename:
+        return {
+            "source": filename,
+            "academic_year": "2024-25",
+            "document_type": "regulations",
+            "document_status": "historical",
+        }
+
+    return {
+        "source": filename,
+        "academic_year": "unknown",
+        "document_type": "unknown",
+        "document_status": "unknown",
+    }
+
+
 def load_pdf(file_path: str | Path) -> list[Document]:
-    """
-    Load a PDF file and return its pages as LangChain Documents.
-
-    Args:
-        file_path: Path to the PDF file.
-
-    Returns:
-        A list of LangChain Document objects.
-
-    Raises:
-        FileNotFoundError: If the PDF does not exist.
-        ValueError: If the supplied path is not a PDF file.
-    """
     path = Path(file_path)
 
     if not path.exists():
@@ -33,23 +56,15 @@ def load_pdf(file_path: str | Path) -> list[Document]:
     loader = PyPDFLoader(str(path))
     documents = loader.load()
 
+    metadata = _get_document_metadata(path)
+
+    for document in documents:
+        document.metadata.update(metadata)
+
     return documents
 
 
 def load_directory(directory_path: str | Path) -> list[Document]:
-    """
-    Recursively load all PDF files from a directory.
-
-    Args:
-        directory_path: Directory containing PDF documents.
-
-    Returns:
-        A combined list of LangChain Documents from all PDFs.
-
-    Raises:
-        FileNotFoundError: If the directory does not exist.
-        NotADirectoryError: If the path is not a directory.
-    """
     directory = Path(directory_path)
 
     if not directory.exists():
