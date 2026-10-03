@@ -3,10 +3,15 @@
 
 from dataclasses import dataclass
 
-from langchain_core.messages import HumanMessage, SystemMessage
+from langchain_core.messages import (
+    AIMessage,
+    HumanMessage,
+    SystemMessage,
+)
 
 from src.llm.config import LLMConfig
 from src.llm.context import format_retrieved_context
+from src.llm.memory import ConversationMemory
 from src.llm.model import create_chat_model
 from src.llm.prompts import SYSTEM_PROMPT, build_rag_prompt
 from src.rag.retriever import RetrievalResult
@@ -52,6 +57,7 @@ def generate_answer(
     question: str,
     retrieval_results: list[RetrievalResult],
     config: LLMConfig | None = None,
+    memory: ConversationMemory | None = None,
 ) -> GeneratedAnswer:
     """Generate a grounded answer from retrieved college documents."""
 
@@ -61,11 +67,17 @@ def generate_answer(
         raise ValueError("Question cannot be empty.")
 
     if not retrieval_results:
+        answer_text = (
+            "The information is not available in the provided "
+            "college documents."
+        )
+
+        if memory is not None:
+            memory.add_user_message(question)
+            memory.add_assistant_message(answer_text)
+
         return GeneratedAnswer(
-            answer=(
-                "The information is not available in the provided "
-                "college documents."
-            ),
+            answer=answer_text,
             sources=[],
         )
 
@@ -74,21 +86,33 @@ def generate_answer(
     context = format_retrieved_context(retrieval_results)
     user_prompt = build_rag_prompt(question, context)
 
+    messages = [SystemMessage(content=SYSTEM_PROMPT)]
+
+    if memory is not None:
+        for role, content in memory.get_messages():
+            if role == "user":
+                messages.append(HumanMessage(content=content))
+            elif role == "assistant":
+                messages.append(AIMessage(content=content))
+
+    messages.append(HumanMessage(content=user_prompt))
+
     model = create_chat_model(llm_config)
 
-    response = model.invoke(
-        [
-            SystemMessage(content=SYSTEM_PROMPT),
-            HumanMessage(content=user_prompt),
-        ]
-    )
-  answer_text = str(response.content).strip()
+    response = model.invoke(messages)
 
-if not answer_text:
-    raise RuntimeError(
-        "The LLM returned an empty response. Please try again."
-    )
+    answer_text = str(response.content).strip()
+
+    if not answer_text:
+        raise RuntimeError(
+            "The LLM returned an empty response. Please try again."
+        )
+
+    if memory is not None:
+        memory.add_user_message(question)
+        memory.add_assistant_message(answer_text)
+
     return GeneratedAnswer(
-        answer=str(response.content).strip(),
+        answer=answer_text,
         sources=_build_sources(retrieval_results),
     )
