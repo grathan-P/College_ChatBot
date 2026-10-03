@@ -39,18 +39,36 @@ class GeneratedAnswer:
 def _build_sources(
     retrieval_results: list[RetrievalResult],
 ) -> list[AnswerSource]:
-    """Build trustworthy source information from retrieval results."""
+    """Build unique source information from retrieval results."""
 
-    return [
-        AnswerSource(
-            source=result.source,
-            page=result.page,
-            academic_year=result.academic_year,
-            document_type=result.document_type,
-            document_status=result.document_status,
+    sources: list[AnswerSource] = []
+    seen_sources: set[tuple] = set()
+
+    for result in retrieval_results:
+        source_key = (
+            result.source,
+            result.page,
+            result.academic_year,
+            result.document_type,
+            result.document_status,
         )
-        for result in retrieval_results
-    ]
+
+        if source_key in seen_sources:
+            continue
+
+        seen_sources.add(source_key)
+
+        sources.append(
+            AnswerSource(
+                source=result.source,
+                page=result.page,
+                academic_year=result.academic_year,
+                document_type=result.document_type,
+                document_status=result.document_status,
+            )
+        )
+
+    return sources
 
 
 def generate_answer(
