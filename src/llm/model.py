@@ -3,9 +3,12 @@
 
 import os
 
+from dotenv import load_dotenv
 from langchain_openrouter import ChatOpenRouter
 
 from src.llm.config import LLMConfig
+
+load_dotenv()
 
 
 def create_chat_model(config: LLMConfig) -> ChatOpenRouter:

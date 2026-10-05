@@ -23,6 +23,9 @@ Install dependencies:
 
 pip install -r requirements.txt
 
+Create a `.env` file from `.env.example` and set your `OPENROUTER_API_KEY`.
+The study planner and LLM-powered answers require this key.
+
 Run the application:
 
 streamlit run app.py
